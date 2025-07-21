@@ -23,6 +23,8 @@ const SignLanguageRecognizer = ()=>{
     const [isRecognizing, setIsRecognizing] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isLoading, setIsLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [cameraReady, setCameraReady] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [sessionLogs, setSessionLogs] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
+    const [isExporting, setIsExporting] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const captureIntervalRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     const streamRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     // Start camera stream
@@ -95,6 +97,14 @@ const SignLanguageRecognizer = ()=>{
                 const text = data.recognizedText;
                 if (text && text !== 'No sign detected' && text !== 'No text recognized') {
                     setRecognizedText(text);
+                    // Add to session logs
+                    setSessionLogs((prev)=>[
+                            ...prev,
+                            {
+                                timestamp: new Date().toISOString(),
+                                text: text
+                            }
+                        ]);
                     // Speak the recognized text using Web Speech API
                     if ("speechSynthesis" in window) {
                         const utterance = new SpeechSynthesisUtterance(text);
@@ -128,6 +138,61 @@ const SignLanguageRecognizer = ()=>{
             captureIntervalRef.current = null;
         }
     };
+    // Download session data as pickle file
+    const downloadSession = async ()=>{
+        if (sessionLogs.length === 0) {
+            setError("No session data to export. Start recognition first.");
+            return;
+        }
+        try {
+            setIsExporting(true);
+            setError("");
+            const sessionData = {
+                sessionId: Date.now().toString(),
+                startTime: sessionLogs[0]?.timestamp || new Date().toISOString(),
+                endTime: new Date().toISOString(),
+                totalRecognitions: sessionLogs.length,
+                recognizedTexts: sessionLogs,
+                lastRecognizedText: recognizedText,
+                metadata: {
+                    userAgent: navigator.userAgent,
+                    timestamp: new Date().toISOString(),
+                    appVersion: "1.0.0"
+                }
+            };
+            const response = await fetch('/api/export', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(sessionData)
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to export session');
+            }
+            // Create blob and trigger download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `session_data_${Date.now()}.pkl`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            setError(e.message || 'Error during session export');
+        } finally{
+            setIsExporting(false);
+        }
+    };
+    // Clear session logs
+    const clearSession = ()=>{
+        setSessionLogs([]);
+        setRecognizedText("");
+        setError("");
+    };
     // Initialize camera on mount
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "SignLanguageRecognizer.useEffect": ()=>{
@@ -151,7 +216,7 @@ const SignLanguageRecognizer = ()=>{
                         children: "Real-time Sign Language Recognition"
                     }, void 0, false, {
                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                        lineNumber: 141,
+                        lineNumber: 212,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -159,13 +224,13 @@ const SignLanguageRecognizer = ()=>{
                         children: "Supports ASL, BSL, and ISL recognition with voice output"
                     }, void 0, false, {
                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                        lineNumber: 144,
+                        lineNumber: 215,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                lineNumber: 140,
+                lineNumber: 211,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -180,7 +245,7 @@ const SignLanguageRecognizer = ()=>{
                         onLoadedMetadata: ()=>setCameraReady(true)
                     }, void 0, false, {
                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                        lineNumber: 150,
+                        lineNumber: 221,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("canvas", {
@@ -190,7 +255,7 @@ const SignLanguageRecognizer = ()=>{
                         }
                     }, void 0, false, {
                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                        lineNumber: 158,
+                        lineNumber: 229,
                         columnNumber: 9
                     }, this),
                     isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -200,18 +265,18 @@ const SignLanguageRecognizer = ()=>{
                             children: "Recognizing..."
                         }, void 0, false, {
                             fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                            lineNumber: 162,
+                            lineNumber: 233,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                        lineNumber: 161,
+                        lineNumber: 232,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                lineNumber: 149,
+                lineNumber: 220,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -228,7 +293,7 @@ const SignLanguageRecognizer = ()=>{
                                         children: "Recognized: "
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                                        lineNumber: 172,
+                                        lineNumber: 243,
                                         columnNumber: 17
                                     }, this),
                                     recognizedText
@@ -238,17 +303,17 @@ const SignLanguageRecognizer = ()=>{
                                 children: "Position your hands in front of the camera to begin recognition"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                                lineNumber: 176,
+                                lineNumber: 247,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                            lineNumber: 169,
+                            lineNumber: 240,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                        lineNumber: 168,
+                        lineNumber: 239,
                         columnNumber: 9
                     }, this),
                     error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -258,44 +323,134 @@ const SignLanguageRecognizer = ()=>{
                             children: error
                         }, void 0, false, {
                             fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                            lineNumber: 185,
+                            lineNumber: 256,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                        lineNumber: 184,
+                        lineNumber: 255,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                lineNumber: 167,
+                lineNumber: 238,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "flex gap-4",
-                children: !isRecognizing ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                    onClick: startRecognition,
-                    disabled: !cameraReady,
-                    className: "px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors",
-                    children: "Start Recognition"
-                }, void 0, false, {
+                className: "flex flex-wrap gap-4 justify-center",
+                children: [
+                    !isRecognizing ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        onClick: startRecognition,
+                        disabled: !cameraReady,
+                        className: "px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors",
+                        children: "Start Recognition"
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                        lineNumber: 263,
+                        columnNumber: 11
+                    }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        onClick: stopRecognition,
+                        className: "px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors",
+                        children: "Stop Recognition"
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                        lineNumber: 271,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        onClick: downloadSession,
+                        disabled: sessionLogs.length === 0 || isExporting,
+                        className: "px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors",
+                        children: isExporting ? 'Exporting...' : 'Download Session'
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                        lineNumber: 279,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        onClick: clearSession,
+                        disabled: sessionLogs.length === 0,
+                        className: "px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors",
+                        children: "Clear Session"
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                        lineNumber: 287,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                lineNumber: 261,
+                columnNumber: 7
+            }, this),
+            sessionLogs.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "w-full max-w-2xl",
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "bg-gray-50 dark:bg-gray-900 rounded-lg p-4",
+                    children: [
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                            className: "text-lg font-semibold text-gray-900 dark:text-white mb-2",
+                            children: "Session Summary"
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                            lineNumber: 299,
+                            columnNumber: 13
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                            className: "text-sm text-gray-600 dark:text-gray-400 mb-2",
+                            children: [
+                                "Total recognitions: ",
+                                sessionLogs.length
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                            lineNumber: 302,
+                            columnNumber: 13
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "max-h-32 overflow-y-auto",
+                            children: [
+                                sessionLogs.slice(-5).map((log, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "text-xs text-gray-500 dark:text-gray-500 mb-1",
+                                        children: [
+                                            new Date(log.timestamp).toLocaleTimeString(),
+                                            ": ",
+                                            log.text
+                                        ]
+                                    }, index, true, {
+                                        fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                                        lineNumber: 307,
+                                        columnNumber: 17
+                                    }, this)),
+                                sessionLogs.length > 5 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "text-xs text-gray-400 dark:text-gray-600",
+                                    children: [
+                                        "... and ",
+                                        sessionLogs.length - 5,
+                                        " more"
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                                    lineNumber: 312,
+                                    columnNumber: 17
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
+                            lineNumber: 305,
+                            columnNumber: 13
+                        }, this)
+                    ]
+                }, void 0, true, {
                     fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                    lineNumber: 192,
-                    columnNumber: 11
-                }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                    onClick: stopRecognition,
-                    className: "px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors",
-                    children: "Stop Recognition"
-                }, void 0, false, {
-                    fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                    lineNumber: 200,
+                    lineNumber: 298,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                lineNumber: 190,
-                columnNumber: 7
+                lineNumber: 297,
+                columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "text-sm text-gray-600 dark:text-gray-400 text-center max-w-md",
@@ -305,29 +460,29 @@ const SignLanguageRecognizer = ()=>{
                             children: "Tips:"
                         }, void 0, false, {
                             fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                            lineNumber: 211,
+                            lineNumber: 323,
                             columnNumber: 11
                         }, this),
                         " Ensure good lighting, keep hands clearly visible, and make distinct gestures for best recognition results."
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                    lineNumber: 210,
+                    lineNumber: 322,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-                lineNumber: 209,
+                lineNumber: 321,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/SignLanguageRecognizer.tsx",
-        lineNumber: 139,
+        lineNumber: 210,
         columnNumber: 5
     }, this);
 };
-_s(SignLanguageRecognizer, "rMGvsrPnszkga7M6ABnmOojyYh4=");
+_s(SignLanguageRecognizer, "YnpvyB1G4UWy5QOqSJGoi868zXQ=");
 _c = SignLanguageRecognizer;
 const __TURBOPACK__default__export__ = SignLanguageRecognizer;
 var _c;
